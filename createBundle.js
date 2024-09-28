@@ -121,6 +121,7 @@ const addBundles = async (twilioClient, account) => {
   let bundleApplicationSid = null; // RDxxxxxx
   let corporateRegistrySid = null; // RDxxxxxx
   let powerOfAttorneySid = null; // RDxxxxxx
+  let companyByLawsSid = null; // RDxxxxxx
   let driversLicenseSid = null; // RDxxxxxx
   let myNumberCardSid = null; // RDxxxxxx
   let itemAssignment = null; // BVxxxxxxx
@@ -250,6 +251,30 @@ const addBundles = async (twilioClient, account) => {
       );
     }
 
+    // Create a Supporting Document with file upload (Company By-Laws)
+    if (POWER_OF_ATTORNEY_FILE.length === 0) {
+      formData = new FormData();
+      formData.append("Type", "company_by_laws");
+      formData.append("MimeType", "application/pdf");
+      formData.append(
+        "Attributes",
+        JSON.stringify({
+          first_name: FIRST_NAME,
+          last_name: LAST_NAME,
+        }),
+      );
+      formData.append("FriendlyName", `Company By-Laws at ${now}`);
+      formData.append(
+        "File",
+        fs.createReadStream(`./images/${CORPORATE_REGISTRY_FILE}`),
+        CORPORATE_REGISTRY_FILE,
+      );
+      companyByLawsSid = await uploadDocument(formData, account);
+      console.log(
+        `🐞 Company By-Laws Document uploaded. ${companyByLawsSid}`,
+      );
+    }
+
     // Create a Supporting Document with file upload (Driving License)
     formData = new FormData();
     formData.append("Type", "drivers_license");
@@ -327,6 +352,18 @@ const addBundles = async (twilioClient, account) => {
         });
       console.log(
         `🐞 Power Of Attorney Document assigned. ${itemAssignment.sid}`,
+      );
+    }
+
+    // Assign company by-laws document to Regulatory Bundle
+    if (POWER_OF_ATTORNEY_FILE.length === 0) {
+      itemAssignment = await twilioClient.numbers.v2.regulatoryCompliance
+        .bundles(bundleSid)
+        .itemAssignments.create({
+          objectSid: companyByLawsSid,
+        });
+      console.log(
+        `🐞 Company By-Laws Document assigned. ${itemAssignment.sid}`,
       );
     }
 
